@@ -5,6 +5,7 @@ import re
 import sys
 
 import click
+from codex32.codex32 import *
 
 from .bip32 import to_master_key
 from .bip32types import parse_ext_key, validate_prv_str
@@ -37,6 +38,7 @@ from .util import (
 )
 
 ISO_TO_LANGUAGE = {v["code"]: k for k, v in LANGUAGES.items()}
+ISO_TO_HRP = {v["code"]: k for k, v in HRPS.items()}
 
 N_WORDS_ALLOWED_STR = [str(n) for n in N_WORDS_ALLOWED]
 
@@ -137,16 +139,49 @@ def validate(from_, mnemonic):
     click.echo(" ".join(words))
 
 
+# TODO: paste codex32 cli here
+
+
+@click.command(
+    name="recover",
+    help="Validate a set of codex32 strings and recover the secret or share at target share index",
+)
+@click.option(
+    "-t", "--target", help="Share index to recover at. Default is the secret `s`."
+)
+def recover(strings, target="s"):
+    click.echo(Codex32String.interpolate_at(strings, target))
+
+
 @click.command(
     name="xprv",
     help="Derive a BIP-32 XPRV from arbitrary string. Use bipsea validate` to validate!",
 )
 @click.option("-m", "--mnemonic", help="Mnemonic. Pipe from `bipsea validate`.")
+@click.option("-c", "--codex32", help="Codex32 secret. Pipe from `bipsea recover`.")
 @click.option("-p", "--passphrase", default="", help="BIP-39 passphrase.")
 @click.option("--mainnet/--testnet", is_flag=True, default=True)
-def xprv(mnemonic, passphrase, mainnet):
+def xprv(mnemonic, codex32, passphrase, mainnet):
     if mnemonic:
         mnemonic = mnemonic.strip()
+    elif codex32:
+        codex32 = codex32.strip()
+        no_empty_param("--codex32", codex32)
+        if len(codex32) < 48:
+            raise click.BadOptionUsage(
+                option_name="--codex32",
+                message="Suspiciously short codex32 secret. Try `bipsea recover`.",
+            )
+        if passphrase:
+            raise click.BadOptionUsage(
+                option_name="--passphrase",
+                message="No passphrase support for codex32 secrets. Try `bipsea recover`.",
+            )
+        seed = Codex32String.from_string(codex32).parts().data()
+        prv = to_master_key(seed, mainnet=mainnet, private=True)
+
+        click.echo(prv)
+        return
     else:
         mnemonic = try_for_pipe_input()
     no_empty_param("--mnemonic", mnemonic)
@@ -206,6 +241,8 @@ def xprv(mnemonic, passphrase, mainnet):
     help="Output language for `--application mnemonic`.",
 )
 def derive_cli(application, number, index, special, xprv, to):
+    # TODO Write the "glue" between the bip85 codex32 logic and CLI last as it's the hardest step.
+    # TODO Copy unfinished work from patch-1
     if xprv:
         xprv = xprv.strip()
     else:
@@ -243,6 +280,18 @@ def derive_cli(application, number, index, special, xprv, to):
         language = ISO_TO_LANGUAGE[to]
         code_85 = next(i for i, l in INDEX_TO_LANGUAGE.items() if l == language)
         path += f"/{code_85}/{number}'/{index}'"
+    elif application == "codex32":
+        hrp, data = bech32_decode("ms1" + str(0) + "test")
+        code_85 = ISO_TO_HRP[hrp] + int.from_bytes(
+            convertbits(data, 5, 8)
+        )  # serialization must fit in 32-bits
+        # 3.2 for threshold, 20 for identifier, 1 for hrp if just 0,1 dict + 4 more for default IDs
+        # add the {index} to the encoded indentifier so that it increments as the index is. That gives 2^20 seeds before we reuse the original identifier
+        # this gives the amazing property for fingerprint IDs when you know the master fingerprint
+        # that you can subtract them and see what index was used to generate that codex32 backup.
+        # be sure it rolls over at 2^20 so that the threshold doesn't increment as well which will
+        # break things.
+        path += f"/{code_85}'/{number}'/{index}'"
     elif application in ("wif", "xprv"):
         path += f"/{index}'"
     elif application in ("base64", "base85", "hex"):
@@ -271,6 +320,8 @@ def cli():
 
 cli.add_command(mnemonic)
 cli.add_command(validate)
+cli.add_command(codex32)
+cli.add_command(recover)
 cli.add_command(xprv)
 cli.add_command(derive_cli)
 
