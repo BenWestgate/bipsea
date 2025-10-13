@@ -48,7 +48,8 @@ bipsea --help
 bipsea offers four commands that work together:
 
 1. `mnemonic` creates BIP-39 seed mnemonics in 9 languages
-1. `validate` validates BIP-39 in 9 languages
+1. `codex32` creates BIP-93 codex32 backups
+1. `validate` validates BIP-39 in 9 languages and codex32 backups
 1. `xprv` derives a BIP-32 extended private key
 1. `derive` applies BIP-85 to an xprv to derive child secrets
 
@@ -122,6 +123,37 @@ bipsea mnemonic -t spa -n 12 | bipsea validate -f spa
     relleno peón exilio vara grave hora boda terapia dinero vulgar vulgar goloso
 
 
+## `codex32`
+
+Suppose you want a 3-of-5 codex32 backup.
+
+```sh
+bipsea codex32
+```
+    ms13casha320zyxwvutsrqpnmlkjhgfedca2a8d0zehn8a0t ms13cashcacdefghjklmnpqrstuvwxyz023949xq35my48dr ms13cashd0wsedstcdcts64cd7wvy4m90lm28w4ffupqs7rm ms13casheekgpemxzshcrmqhaydlp6yhms3ws7320xyxsar9 ms13cashf8jh6sdrkpyrsp5ut94pj8ktehhw2hfvyrj48704
+
+Or a 2-of-3 with identifier 'NAME'.
+
+```sh
+bipsea codex32 -t2 -n3 -i'NAME' --pretty
+```
+    MS12NAMEA320ZYXWVUTSRQPNMLKJHGFEDCAXRPP870HKKQRM
+    MS12NAMECACDEFGHJKLMNPQRSTUVWXYZ023FTR2GDZMPY6PN
+    MS12NAMEDLL4F8JLH4E5VDVULDLFXU2JHDNLSM97XVENRXEG
+
+
+## `bipsea recover`
+
+BIP-93 codex32 backups contain a 48-124 characters, and include a checksum.
+`recover` checks the integrity of a codex32 string or set of shares, recovers the codex32 secret,
+then echoes the result so that you can pipe it to `bipsea xprv`.
+
+```sh
+echo "MS12NAMEDLL4F8JLH4E5VDVULDLFXU2JHDNLSM97XVENRXEG MS12NAMEA320ZYXWVUTSRQPNMLKJHGFEDCAXRPP870HKKQRM" | bipsea recover
+```
+    MS12NAMES6XQGUZTTXKEQNJSJZV4JV3NZ5K3KWGSPHUH6EVW
+
+
 ## `bipsea xprv`
 
 ```sh
@@ -129,13 +161,13 @@ bipsea mnemonic | bipsea validate | bipsea xprv
 ```
     xprv9s21ZrQH143K41bKPQ9XHbPoqfdCDmZLBorYHay5E273HTu5yAFm27sSWRoCpisgQNH9vfrL9yVvVg5rBEbMCk2UwQ8K7qCFnZAY7aXhuqV
 
-`bipsea xprv` converts a mnemonic into a master node (the root of your wallet
+`bipsea xprv` converts a mnemonic or codex32 secret into a master node (the root of your wallet
 chain) that serializes as an xprv or _extended private key_.
 
 
 ### xprv from dice rolls (or any string)
 
-```
+```sh
 bipsea validate -f free -m "123456123456123456" | bipsea xprv
 ```
     Warning: Relative entropy of input seems low (0.42). Consider a more complex --mnemonic.
@@ -174,7 +206,7 @@ Below are several applications.
 
 
 ### base85 passwords
-```
+```sh
 bipsea validate -m $MNEMONIC | bipsea xprv | bipsea derive -a base85
 ```
     iu?42{I|2Ct{39IpEP5zBn=0
@@ -185,13 +217,28 @@ we get `-n 20` characters of a base85 password.
 
 ### mnemonic phrases
 
-```
+```sh
 bipsea validate -m "$MNEMONIC" | bipsea xprv | bipsea derive -a mnemonic -t jpn -n 12
 ```
     ちこく へいおん ふくざつ ゆらい あたりまえ けんか らくがき ずほう みじかい たんご いそうろう えいきょう
 
 As with all applications, you can change the child index from it's default of zero
 to get a fresh, repeatable secret.
+
+
+### codex32 strings
+
+```sh
+bipsea validate -m "$MNEMONIC" | bipsea xprv | bipsea derive -a codex32 -t 3
+```
+    ms13casha320zyxwvutsrqpnmlkjhgfedca2a8d0zehn8a0t ms13cashcacdefghjklmnpqrstuvwxyz023949xq35my48dr ms13cashd0wsedstcdcts64cd7wvy4m90lm28w4ffupqs7rm
+
+The output will always be the first threshold t initial shares, or a codex32 secret if `-t 0` these may be passed to `codex32` to generate a backup of -n shares.
+
+```sh
+bipsea validate -m "$MNEMONIC" | bipsea xprv | bipsea derive -a codex32 -t 3 | bipsea codex32 -n 5
+```
+    ms13casha320zyxwvutsrqpnmlkjhgfedca2a8d0zehn8a0t ms13cashcacdefghjklmnpqrstuvwxyz023949xq35my48dr ms13cashd0wsedstcdcts64cd7wvy4m90lm28w4ffupqs7rm ms13casheekgpemxzshcrmqhaydlp6yhms3ws7320xyxsar9 ms13cashf8jh6sdrkpyrsp5ut94pj8ktehhw2hfvyrj48704
 
 
 ### DRNG, enter the matrix
@@ -347,7 +394,7 @@ See [Makefile](./Makefile) for more commands.
 
 ## Is the bipsea implementation correct?
 
-bipsea passes all BIP-32, BIP-39, and BIP-85 test vectors in all BIP-39 languages
+bipsea passes all BIP-32, BIP-39, BIP-85 and BIP-94 test vectors in all BIP-39 languages
 plus its own unit tests.
 
 There is a single BIP-85 vector, which we believe to be incorrect in the spec,
@@ -364,6 +411,8 @@ mnemonic seed words
 generalized BIP-32 paths
 1. [BIP-85](https://github.com/bitcoin/bips/blob/master/bip-0085.mediawiki)
 generalized cryptographic entropy
+1. [BIP-93](https://github.com/bitcoin/bips/blob/master/bip-0094.mediawiki)
+checksummed SSSS-aware BIP-32 seeds
 
 
 # TODO
