@@ -6,6 +6,7 @@ import re
 from typing import Dict, Union
 
 import base58
+from codex32.codex32 import CHARSET, entropy_to_strings, Codex32String
 
 from .bip32 import VERSIONS, ExtendedKey
 from .bip32 import derive_key as derive_key_bip32
@@ -23,9 +24,12 @@ APPLICATIONS = {
     "drng": "0'",
     "hex": "128169'",
     "mnemonic": "39'",
+    "codex32": "93'",
     "wif": "2'",
     "xprv": "32'",
 }
+
+# TODO lots to copy in from patch-1!
 
 RANGES = {
     "base64": (20, 86),
