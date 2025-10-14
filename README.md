@@ -395,7 +395,7 @@ See [Makefile](./Makefile) for more commands.
 
 ## Is the bipsea implementation correct?
 
-bipsea passes all BIP-32, BIP-39, BIP-85 and BIP-94 test vectors in all BIP-39 languages
+bipsea passes all BIP-32, BIP-39, BIP-85 and BIP-93 test vectors in all BIP-39 languages
 plus its own unit tests.
 
 There is a single BIP-85 vector, which we believe to be incorrect in the spec,
