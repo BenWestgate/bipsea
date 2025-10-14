@@ -5,7 +5,7 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry]
 name = "bipsea"
 version = "3.0.0"
-description = "Composable Python CLI for Bitcoin mnemonics, codex32 strings and BIP-85 secrets."
+description = "Composable Python CLI for Bitcoin mnemonics and BIP-85 secrets."
 readme = "README.md"
 authors = ["Aneesh Karve <bonded_metals_0u@icloud.com>"]
 license = "Apache-2.0"
