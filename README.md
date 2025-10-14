@@ -48,8 +48,9 @@ bipsea --help
 bipsea offers four commands that work together:
 
 1. `mnemonic` creates BIP-39 seed mnemonics in 9 languages
+1. `validate` validates BIP-39 in 9 languages
 1. `codex32` creates BIP-93 codex32 backups
-1. `validate` validates BIP-39 in 9 languages and codex32 backups
+1. `recover` validates BIP-93 strings and recovers seed
 1. `xprv` derives a BIP-32 extended private key
 1. `derive` applies BIP-85 to an xprv to derive child secrets
 
