@@ -23,6 +23,7 @@ poetry run bipsea mnemonic | poetry run bipsea validate
 poetry run bipsea mnemonic | poetry run bipsea validate | poetry run bipsea xprv
 
 poetry run bipsea xprv -m "$MNEMONIC" | poetry run bipsea derive -a mnemonic -n 12
+poetry run bipsea xprv -c "$CODEX32" | poetry run bipsea derive -a mnemonic -n 12
 
 poetry run bipsea validate -f free -m "123456123456123456" | poetry run bipsea xprv
 poetry run bipsea validate -f free -m "$(cat input.txt)"
