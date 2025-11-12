@@ -3,6 +3,7 @@
 set -e
 
 MNEMONIC="elder major green sting survey canoe inmate funny bright jewel anchor volcano"
+CODEX32="ms10testsxxxxxxxxxxxxxxxxxxxxxxxxxx4nzvca9cmczlw"
 
 poetry run bipsea --version
 

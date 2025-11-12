@@ -5,6 +5,7 @@ import re
 import sys
 
 import click
+from codex32.codex32 import Codex32String as ms32
 
 from .bip32 import to_master_key
 from .bip32types import parse_ext_key, validate_prv_str
@@ -142,15 +143,15 @@ def validate(from_, mnemonic):
     help="Derive a BIP-32 XPRV from arbitrary string. Use bipsea validate` to validate!",
 )
 @click.option("-m", "--mnemonic", help="Mnemonic. Pipe from `bipsea validate`.")
+@click.option("-c", "--codex32", help="Codex32 secret.")
 @click.option("-p", "--passphrase", default="", help="BIP-39 passphrase.")
 @click.option("--mainnet/--testnet", is_flag=True, default=True)
-def xprv(mnemonic, passphrase, mainnet):
-    if mnemonic:
-        mnemonic = mnemonic.strip()
+def xprv(mnemonic, codex32, passphrase, mainnet):
+    if mnemonic or codex32:
+        mnemonic = mnemonic.strip() if mnemonic else codex32.strip()
     else:
         mnemonic = try_for_pipe_input()
-    no_empty_param("--mnemonic", mnemonic)
-
+    no_empty_param("--mnemonic or --codex32", mnemonic)
     mnemonic_list = re.split(r"\s+", mnemonic)
     total_chars = sum(len(s) for s in mnemonic_list)
     if total_chars < 10:
@@ -159,7 +160,7 @@ def xprv(mnemonic, passphrase, mainnet):
             message="Suspiciously short mnemonic. Try `bipsea validate`.",
         )
 
-    seed = to_master_seed(mnemonic_list, passphrase)
+    seed = ms32(mnemonic).data if codex32 else to_master_seed(mnemonic_list, passphrase)
     prv = to_master_key(seed, mainnet=mainnet, private=True)
 
     click.echo(prv)
