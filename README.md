@@ -129,13 +129,13 @@ bipsea mnemonic | bipsea validate | bipsea xprv
 ```
     xprv9s21ZrQH143K41bKPQ9XHbPoqfdCDmZLBorYHay5E273HTu5yAFm27sSWRoCpisgQNH9vfrL9yVvVg5rBEbMCk2UwQ8K7qCFnZAY7aXhuqV
 
-`bipsea xprv` converts a mnemonic into a master node (the root of your wallet
+`bipsea xprv` converts a mnemonic or codex32 secret into a master node (the root of your wallet
 chain) that serializes as an xprv or _extended private key_.
 
 
 ### xprv from dice rolls (or any string)
 
-```
+```sh
 bipsea validate -f free -m "123456123456123456" | bipsea xprv
 ```
     Warning: Relative entropy of input seems low (0.42). Consider a more complex --mnemonic.
@@ -174,7 +174,7 @@ Below are several applications.
 
 
 ### base85 passwords
-```
+```sh
 bipsea validate -m $MNEMONIC | bipsea xprv | bipsea derive -a base85
 ```
     iu?42{I|2Ct{39IpEP5zBn=0
@@ -185,13 +185,33 @@ we get `-n 20` characters of a base85 password.
 
 ### mnemonic phrases
 
-```
+```sh
 bipsea validate -m "$MNEMONIC" | bipsea xprv | bipsea derive -a mnemonic -t jpn -n 12
 ```
     ちこく へいおん ふくざつ ゆらい あたりまえ けんか らくがき ずほう みじかい たんご いそうろう えいきょう
 
 As with all applications, you can change the child index from it's default of zero
 to get a fresh, repeatable secret.
+
+
+### codex32 strings
+
+Unshared secrets
+```
+bipsea validate -m "$MNEMONIC" | bipsea xprv | bipsea derive -a codex32
+```
+    ms10cashs320zyxwvutsrqpnmlkjhgfedca2a8d0zehn8a0t
+
+Shamir shares
+```
+bipsea validate -m "$MNEMONIC" | bipsea xprv | bipsea derive -a codex32 -h 3casha
+```
+    ms13casha320zyxwvutsrqpnmlkjhgfedca2a8d0zehn8a0t
+
+`-h` or `--header` is the threshold digit, 4 character identifier and share index.
+
+As with all applications, you can change the child index from it's default of zero
+to get a fresh, repeatable codex32 string. Use a unique `identifier` for each share set.
 
 
 ### DRNG, enter the matrix
@@ -347,7 +367,7 @@ See [Makefile](./Makefile) for more commands.
 
 ## Is the bipsea implementation correct?
 
-bipsea passes all BIP-32, BIP-39, and BIP-85 test vectors in all BIP-39 languages
+bipsea passes all BIP-32, BIP-39, BIP-85 and BIP-93 test vectors in all BIP-39 languages
 plus its own unit tests.
 
 There is a single BIP-85 vector, which we believe to be incorrect in the spec,
@@ -364,6 +384,8 @@ mnemonic seed words
 generalized BIP-32 paths
 1. [BIP-85](https://github.com/bitcoin/bips/blob/master/bip-0085.mediawiki)
 generalized cryptographic entropy
+1. [BIP-93](https://github.com/bitcoin/bips/blob/master/bip-0094.mediawiki)
+checksummed SSSS-aware BIP-32 seeds
 
 
 # TODO
