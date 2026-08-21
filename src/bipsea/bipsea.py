@@ -27,6 +27,7 @@ from .bip85 import (
     derive,
     to_entropy,
 )
+from .registry import get_app
 from .util import (
     LOGGER_NAME,
     MIN_REL_ENTROPY,
@@ -184,8 +185,10 @@ def xprv(mnemonic, passphrase, mainnet):
     "-i",
     "--index",
     type=click.IntRange(0, 2**31 - 1),
-    default=0,
-    help="Child index. Increment for fresh secrets.",
+    help=(
+        "Child index (default 0 except for codex32). Increment for fresh "
+        "secrets; for codex32, supply the serialized header index."
+    ),
 )
 @click.option(
     "-s",
@@ -221,6 +224,14 @@ def derive_cli(application, number, index, special, xprv, to, identity):
     if not validate_prv_str(xprv, private=True):
         raise click.BadParameter("Bad xprv or tprv.", param_hint="--xprv (or pipe)")
 
+    if index is None:
+        if application == "codex32":
+            raise click.BadOptionUsage(
+                option_name="--index",
+                message="--index is required for --application codex32",
+            )
+        index = 0
+
     if number is not None:
         if application in ("nostr", "wif", "xprv"):
             raise click.BadOptionUsage(
@@ -228,7 +239,7 @@ def derive_cli(application, number, index, special, xprv, to, identity):
                 message="`--number` has no effect when `--application nostr|wif|xprv`",
             )
     else:
-        number = 24
+        number = 26 if application == "codex32" else 24
 
     if identity is not None and application != "nostr":
         raise click.BadOptionUsage(
@@ -277,6 +288,12 @@ def derive_cli(application, number, index, special, xprv, to, identity):
                 ),
             )
         path += f"/{identity}'/{index}'"
+    elif application == "codex32":
+        try:
+            app_segments = get_app(application).path_segments(index, payload_len=number)
+        except ValueError as exc:
+            raise click.UsageError(str(exc)) from exc
+        path += "/" + "/".join(app_segments)
 
     derived = derive(master, path)
     if application == "drng":
