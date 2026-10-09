@@ -319,6 +319,7 @@ class TestDerive:
         [
             ["-i", str(2**30)],
             ["-i", "520937584", "-n", "27"],
+            ["-i", "520937584", "-n", "28"],
         ],
     )
     def test_codex32_rejects_invalid_parameters(self, runner, args):

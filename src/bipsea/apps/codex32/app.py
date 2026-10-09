@@ -9,12 +9,13 @@ from bipsea.drng import DRNG
 BECH32_CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
 CANONICAL_SHARE_INDICES = "acdefghjk"
 MAX_HEADER_INDEX = 2**30
+MASTER_SEED_BYTES = (16, 20, 24, 28, 32, 64)
 
 
 def _validate_payload_len(payload_len: int) -> tuple[int, int]:
     byte_len = 5 * payload_len // 8
     pad_len = 5 * payload_len % 8
-    if not (16 <= byte_len <= 64 and pad_len <= 4):
+    if not (byte_len in MASTER_SEED_BYTES and pad_len <= 4):
         raise ValueError(f"Invalid profile-0 payload length: {payload_len}")
     return byte_len, pad_len
 
@@ -76,7 +77,7 @@ class Codex32App:
                 int,
                 default=26,
                 range=(26, 103),
-                help="Codex32 payload length in bech32 characters",
+                help="Codex32 payload length in bech32 characters (26, 32, 39, 45, 52, or 103)",
                 role="number",
             ),
         ]

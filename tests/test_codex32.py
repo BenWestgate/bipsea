@@ -45,10 +45,17 @@ def test_rejects_unassigned_profile():
         app.apply(bytes(64), 26, 520937584, profile=1)
 
 
-@pytest.mark.parametrize("payload_len", [25, 27, 104])
+@pytest.mark.parametrize("payload_len", [25, 27, 28, 33, 102, 104])
 def test_rejects_invalid_profile_zero_payload_lengths(payload_len):
     with pytest.raises(ValueError, match="payload length"):
         app.path_segments(520937584, payload_len=payload_len)
+
+
+@pytest.mark.parametrize("payload_len", [26, 32, 39, 45, 52, 103])
+def test_accepts_bip93_master_seed_sizes(payload_len):
+    result = app.apply(bytes(64), payload_len, 520937584)
+
+    assert len(Codex32String(result["application"]).data) == 5 * payload_len // 8
 
 
 @pytest.mark.parametrize("header_index", [-1, MAX_HEADER_INDEX])
