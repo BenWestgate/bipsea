@@ -15,6 +15,7 @@ from data.bip85_vectors import COMMON_XPRV
 from bipsea.app_protocol import Param
 from bipsea.apps.base64.app import app as base64_app
 from bipsea.apps.base85.app import app as base85_app
+from bipsea.apps.codex32.app import app as codex32_app
 from bipsea.apps.dice.app import app as dice_app
 from bipsea.apps.hex.app import app as hex_app
 from bipsea.apps.mnemonic.app import app as mnemonic_app
@@ -558,6 +559,80 @@ class TestNostr:
         )
         assert result.exit_code != 0
         assert "--number" in result.output
+
+
+class TestCodex32:
+    def test_path_segments(self):
+        segments = codex32_app.path_segments(548771, threshold=2, share_idx=1)
+        assert segments == ["0'", "26'", "2'", "548771'", "1'"]
+        assert codex32_app.parse_path(segments) == {
+            "payload_len": 26,
+            "threshold": 2,
+            "identifier_index": 548771,
+            "share_idx": 1,
+        }
+        for bad in (["0'", "26'", "520937584'"], ["1'", *segments[1:]]):
+            with pytest.raises(ValueError):
+                codex32_app.parse_path(bad)
+
+    @pytest.mark.parametrize("vector", codex32_app.vectors)
+    def test_vectors(self, runner, vector):
+        payload_len, threshold, identifier, share_idx = (
+            s.rstrip("'") for s in vector.path.split("/")[4:]
+        )
+        result = runner.invoke(
+            cli,
+            [
+                "derive",
+                "-a",
+                "codex32",
+                "-x",
+                vector.master,
+                "-n",
+                payload_len,
+                "-i",
+                identifier,
+                "--threshold",
+                threshold,
+                "--share-idx",
+                share_idx,
+            ],
+        )
+        assert result.exit_code == 0
+        assert result.output.strip() == vector.output
+
+    @pytest.mark.parametrize("args", [[], *(["-n", n] for n in (32, 39, 45, 52, 103))])
+    def test_payload_lengths(self, runner, args):
+        master = codex32_app.vectors[0].master
+        result = runner.invoke(
+            cli, ["derive", "-a", "codex32", "-x", master, "-i", "0", *args]
+        )
+        assert result.exit_code == 0
+        assert result.output.startswith("ms10qqqqs")
+
+    def test_missing_index(self, runner):
+        result = runner.invoke(
+            cli, ["derive", "-a", "codex32", "-x", codex32_app.vectors[0].master]
+        )
+        assert result.exit_code != 0
+        assert "--index is required" in result.output
+
+    @pytest.mark.parametrize(
+        "args",
+        [
+            ["-i", str(2**20)],
+            ["-i", "0", "-n", "27"],
+            ["-i", "0", "-n", "28"],
+            ["-i", "0", "--threshold", "1"],
+            ["-i", "0", "--threshold", "2", "--share-idx", "3"],
+            ["-i", "0", "--share-idx", "1"],
+        ],
+    )
+    def test_invalid_parameters(self, runner, args):
+        master = codex32_app.vectors[0].master
+        result = runner.invoke(cli, ["derive", "-a", "codex32", "-x", master, *args])
+        assert result.exit_code != 0
+        assert "Error" in result.output
 
 
 class TestCliAdapter:

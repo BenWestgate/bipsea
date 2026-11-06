@@ -222,6 +222,25 @@ For a 6-digit PIN roll a 10-sided virtual die.
     4,9,9,3,7,6
 
 
+### codex32 secrets and shares
+
+```sh
+bipsea validate -m "$MNEMONIC" | bipsea xprv | bipsea derive -a codex32 -i 550659
+```
+    ms10secrsvftqfwdggyff9x406k636p392gvzqyjnjf6pgzv
+
+`-i` is the four-character identifier as a 20-bit number (`550659` is `secr`).
+`-n` sets the payload length: 26 (the default), 32, 39, 45, 52, or 103 characters.
+
+For the initial shares of a threshold backup, add `--threshold` and `--share-idx`
+(`1` for share `a`, `2` for share `c`, up to the threshold).
+
+```sh
+bipsea validate -m "$MNEMONIC" | bipsea xprv | bipsea derive -a codex32 -i 548771 --threshold 2 --share-idx 1
+```
+    ms12sharakjwqgvqkp29nfzll7pek3z42avan5uy60xhjvxz
+
+
 # Technical discussion
 
 ## How are bipsea and hierarchical wallet derivation (BIP-85) useful?
